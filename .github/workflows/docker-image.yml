@@ -15,7 +15,7 @@ jobs:
   generate-dockerfile-list:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.create-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v3
 
@@ -24,31 +24,32 @@ jobs:
           echo '{"dockerfiles":[' > dockerfile_list.json
           find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) | sed 's|^./||' | sed 's|$|",|' | sed 's|^|"|' >> dockerfile_list.json
           echo ']}' >> dockerfile_list.json
-      - name: Print dockerfile_list.json
-        run: cat dockerfile_list.json
-      - name: Set output
-        id: set-matrix
+
+      - name: Create matrix for build job
+        id: create-matrix
         run: |
-          echo "::set-output name=matrix::$(jq -c . dockerfile_list.json)"
+          jq -r '.dockerfiles | map({path: ., tag: (split("/") | .[1] + "-" + .[2])})' dockerfile_list.json > matrix.json
+          MATRIX_JSON=$(jq -c . matrix.json)
+          echo "::set-output name=matrix::${MATRIX_JSON}"
 
   build:
     needs: generate-dockerfile-list
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix)}}
+      fail-fast: false
+      matrix: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix)}}
     steps:
       - uses: actions/checkout@v3
 
       - name: Set project name
         run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
 
-      - name: Build and Push Docker image
+      - name: Build the Docker image
         run: |
-          for dockerfile_path in "${{ matrix.dockerfiles }}"; do
-            version=$(echo "$dockerfile_path" | sed -E 's|.*/dockerfiles/([^/]+)/Dockerfile|\1|')
-            image_name="${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:$version"
-            docker build . --file $dockerfile_path --tag $image_name
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
-            docker push $image_name
-          done
+          docker build . --file ${{ matrix.path }} --tag ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:${{ matrix.tag }}
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
+
+      - name: Push the Docker image
+        run: docker push ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:${{ matrix.tag }}
