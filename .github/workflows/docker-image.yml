@@ -28,8 +28,16 @@ jobs:
       - name: Create matrix for build job
         id: create-matrix
         run: |
-          awk -F '"' '/dockerfiles/ {getline; while($0 !~ /^\s*\]/) {split($0,a,"/"); tag=a[3]; gsub(/,$/, "", tag); print "{\"path\": \"" a[0] a[1] a[2] a[3] a[4] "\", \"tag\": \"" tag "\"}"; getline}}' dockerfile_list.json > matrix.json
-
+          echo "dockerfiles=(" > matrix.sh
+          while IFS= read -r line; do
+            path=$(echo "$line" | sed -E 's/.*"(\.\/dockerfiles\/[^"]+)".*/\1/')
+            tag=$(echo "$path" | awk -F/ '{print $(NF-1)}')
+            echo "{\"path\":\"$path\", \"tag\":\"$tag\"}," >> matrix.sh
+          done < <(grep -o '".*"' dockerfile_list.json)
+          echo ")" >> matrix.sh
+          source matrix.sh
+          MATRIX_JSON=$(printf '%s\n' "${dockerfiles[@]}" | jq -cs '.')
+          echo "::set-output name=matrix::${MATRIX_JSON}"
 
 
 
