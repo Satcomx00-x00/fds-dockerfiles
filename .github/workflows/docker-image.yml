@@ -51,7 +51,7 @@ jobs:
           DOCKERFILE_PATH="${{ matrix.dockerfile }}"
           TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}')
           IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:$TAG"
-          echo "------------------- IMAGE_NAME = $IMAGE_NAME-------------------"
+          echo "------------------- TAG = $TAG-------------------"
           
           echo "Building Docker image: $IMAGE_NAME"
           docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
