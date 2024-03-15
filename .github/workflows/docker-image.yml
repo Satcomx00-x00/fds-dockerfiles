@@ -24,12 +24,13 @@ jobs:
           echo "dockerfiles=[" > dockerfile_list.json
           find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) | sed 's|^./||' | sed 's|$|",|' | sed 's|^|"|' >> dockerfile_list.json
           echo "]" >> dockerfile_list.json
+      - name: Print dockerfile_list.json
+        run: cat dockerfile_list.json
       - name: Set output
         id: set-matrix
         run: |
           echo "::set-output name=matrix::$(jq -c . dockerfile_list.json)"
-      - name: Print dockerfile_list.json
-        run: cat dockerfile_list.json
+
 
   build:
     needs: generate-dockerfile-list
