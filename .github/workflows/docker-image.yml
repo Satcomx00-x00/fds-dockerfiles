@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: ["master"]
 
-# Define concurrency group
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -15,50 +14,50 @@ jobs:
   generate-dockerfile-list:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.create-matrix.outputs.matrix }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v3
 
       - name: Generate list of Dockerfiles
         run: |
           echo '{"dockerfiles":[' > dockerfile_list.json
-          find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) | sed 's|^./||' | sed 's|$|",|' | sed 's|^|"|' >> dockerfile_list.json
-          echo ']}' >> dockerfile_list.json
-
-      - name: Create matrix for build job
-        id: create-matrix
+          find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -printf '"%p", ' >> dockerfile_list.json
+          echo 'null]}' >> dockerfile_list.json
+          sed -i '$ s/, null]/]/' dockerfile_list.json # Correctly formats the JSON to remove the last comma
+      - name: Print dockerfile_list.json
+        run: cat dockerfile_list.json
+      - name: Set output
+        id: set-matrix
         run: |
-          echo "dockerfiles=(" > matrix.sh
-          while IFS= read -r line; do
-            path=$(echo "$line" | sed -E 's/.*"(\.\/dockerfiles\/[^"]+)".*/\1/')
-            tag=$(echo "$path" | awk -F/ '{print $(NF-1)}')
-            echo "{\"path\":\"$path\", \"tag\":\"$tag\"}," >> matrix.sh
-          done < <(grep -o '".*"' dockerfile_list.json)
-          echo ")" >> matrix.sh
-          source matrix.sh
-          MATRIX_JSON=$(printf '%s\n' "${dockerfiles[@]}" | jq -cs '.')
-          echo "::set-output name=matrix::${MATRIX_JSON}"
-
-
+          MATRIX=$(jq -c '{dockerfiles: [.dockerfiles[] | select(. != null)]}' dockerfile_list.json)
+          echo "::set-output name=matrix::${MATRIX}"
+          echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
 
   build:
     needs: generate-dockerfile-list
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix)}}
+      matrix:
+        dockerfile: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}
     steps:
       - uses: actions/checkout@v3
 
       - name: Set project name
         run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
 
-      - name: Build the Docker image
+      - name: Build and Push Docker image
         run: |
-          docker build . --file ${{ matrix.path }} --tag ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:${{ matrix.tag }}
-
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
-
-      - name: Push the Docker image
-        run: docker push ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:${{ matrix.tag }}
+          DOCKERFILE_PATH="${{ matrix.dockerfile }}"
+          TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}')
+          IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:$TAG"
+          echo "------------------- IMAGE_NAME = $IMAGE_NAME-------------------"
+          
+          echo "Building Docker image: $IMAGE_NAME"
+          docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
+          
+          echo "Logging in to Docker Hub..."
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
+          
+          echo "Pushing Docker image: $IMAGE_NAME"
+          docker push "$IMAGE_NAME"
