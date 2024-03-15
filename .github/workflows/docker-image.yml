@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: ["master"]
 
+# Define concurrency group
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -21,42 +22,33 @@ jobs:
       - name: Generate list of Dockerfiles
         run: |
           echo '{"dockerfiles":[' > dockerfile_list.json
-          find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -printf '"%p", ' >> dockerfile_list.json
-          echo 'null]}' >> dockerfile_list.json
-          sed -i '$ s/, null]/]/' dockerfile_list.json # Removes the trailing comma and null
+          find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) | sed 's|^./||' | sed 's|$|",|' | sed 's|^|"|' >> dockerfile_list.json
+          echo ']}' >> dockerfile_list.json
       - name: Print dockerfile_list.json
         run: cat dockerfile_list.json
       - name: Set output
         id: set-matrix
         run: |
-          MATRIX=$(jq -c . dockerfile_list.json)
-          echo "::set-output name=matrix::${MATRIX}"
-          echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
+          echo "::set-output name=matrix::$(jq -c . dockerfile_list.json)"
 
   build:
     needs: generate-dockerfile-list
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        dockerfile: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}
+        include: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix)}}
     steps:
       - uses: actions/checkout@v3
 
       - name: Set project name
         run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
 
-      - name: Build the Docker image
+      - name: Build and Push Docker image
         run: |
-          if [ -f "${{ matrix.dockerfile }}" ]; then
-            docker build . --file ${{ matrix.dockerfile }} --tag ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:$(basename ${{ matrix.dockerfile }} .Dockerfile)
-          fi
-
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
-
-      - name: Push the Docker image
-        run: |
-          if [ -f "${{ matrix.dockerfile }}" ]; then
-            docker push ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:$(basename ${{ matrix.dockerfile }} .Dockerfile)
-          fi
+          for dockerfile_path in "${{ matrix.dockerfiles }}"; do
+            version=$(echo "$dockerfile_path" | sed -E 's|.*/dockerfiles/([^/]+)/Dockerfile|\1|')
+            image_name="${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:$version"
+            docker build . --file $dockerfile_path --tag $image_name
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
+            docker push $image_name
+          done
