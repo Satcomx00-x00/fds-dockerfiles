@@ -29,7 +29,7 @@ jobs:
       id: set-matrix
       run: |
         echo "::set-output name=matrix::$(jq -c . dockerfile_list.json)"
-    - name: Print dockerfile_list.json
+    - name: Print dockerfile_listx.json
       run: cat dockerfile_list.json
 
 
