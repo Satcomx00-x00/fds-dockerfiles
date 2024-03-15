@@ -28,9 +28,8 @@ jobs:
       - name: Create matrix for build job
         id: create-matrix
         run: |
-          jq -r '.dockerfiles | map({path: ., tag: (split("/") | .[2])})' dockerfile_list.json > matrix.json
-          MATRIX_JSON=$(jq -c . matrix.json)
-          echo "::set-output name=matrix::${MATRIX_JSON}"
+          awk -F '"' '/dockerfiles/ {getline; while($0 !~ /^\s*\]/) {split($0,a,"/"); tag=a[3]; gsub(/,$/, "", tag); print "{\"path\": \"" a[0] a[1] a[2] a[3] a[4] "\", \"tag\": \"" tag "\"}"; getline}}' dockerfile_list.json > matrix.json
+
 
 
 
