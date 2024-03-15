@@ -1,0 +1,54 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+# Define concurrency group
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate-dockerfile-list:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate list of Dockerfiles
+        run: |
+          echo "dockerfiles=[" > dockerfile_list.json
+          find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) | sed 's|^./||' | sed 's|$|",|' | sed 's|^|"|' >> dockerfile_list.json
+          echo "]" >> dockerfile_list.json
+      - name: Print dockerfile_list.json
+        run: cat dockerfile_list.json
+      - name: Set output
+        id: set-matrix
+        run: |
+          echo "::set-output name=matrix::$(jq -c . dockerfile_list.json)"
+
+
+  build:
+    needs: generate-dockerfile-list
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set project name
+        run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
+
+      - name: Build the Docker image
+        run: docker build . --file ${{ matrix.dockerfiles }} --tag ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:${{ matrix.dockerfiles }}
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
+
+      - name: Push the Docker image
+        run: docker push ${{ secrets.DOCKERHUB_LOGIN }}/${{ env.PROJECT_NAME }}:${{ matrix.dockerfiles }}
