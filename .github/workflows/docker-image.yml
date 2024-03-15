@@ -28,9 +28,11 @@ jobs:
       - name: Create matrix for build job
         id: create-matrix
         run: |
-          jq -r '.dockerfiles | map({path: ., tag: (split("/") | .[1] + "-" + .[2])})' dockerfile_list.json > matrix.json
+          jq -r '.dockerfiles | map({path: ., tag: (split("/") | .[2])})' dockerfile_list.json > matrix.json
           MATRIX_JSON=$(jq -c . matrix.json)
           echo "::set-output name=matrix::${MATRIX_JSON}"
+
+
 
   build:
     needs: generate-dockerfile-list
