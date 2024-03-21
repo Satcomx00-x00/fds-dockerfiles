@@ -1,15 +1,3 @@
-name: Docker Image CI
-
-on:
-  push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   generate-dockerfile-list:
     runs-on: ubuntu-latest
@@ -33,8 +21,23 @@ jobs:
           echo "::set-output name=matrix::${MATRIX}"
           echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
 
-  build:
+  copy-entrypoint:
     needs: generate-dockerfile-list
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Copy entrypoint.sh to all FDS version folders
+        run: |
+          MATRIX_JSON='${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}'
+          for DOCKERFILE in $MATRIX_JSON; do
+            FOLDER=$(dirname $DOCKERFILE)
+            cp entrypoint.sh "$FOLDER/"
+          done
+        shell: bash
+
+  build:
+    needs: copy-entrypoint
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
