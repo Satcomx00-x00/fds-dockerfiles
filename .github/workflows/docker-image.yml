@@ -1,3 +1,15 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   generate-dockerfile-list:
     runs-on: ubuntu-latest
@@ -21,23 +33,8 @@ jobs:
           echo "::set-output name=matrix::${MATRIX}"
           echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
 
-  copy-entrypoint:
-    needs: generate-dockerfile-list
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Copy entrypoint.sh to all FDS version folders
-        run: |
-          MATRIX_JSON='${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}'
-          for DOCKERFILE in $MATRIX_JSON; do
-            FOLDER=$(dirname $DOCKERFILE)
-            cp entrypoint.sh "$FOLDER/"
-          done
-        shell: bash
-
   build:
-    needs: copy-entrypoint
+    needs: generate-dockerfile-list
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -49,12 +46,17 @@ jobs:
       - name: Set project name
         run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
 
+      - name: Copy entrypoint.sh to Dockerfile directory
+        run: |
+          DOCKERFILE_DIR=$(dirname ${{ matrix.dockerfile }})
+          cp ./entrypoint.sh $DOCKERFILE_DIR
+
       - name: Build and Push Docker image
         run: |
           DOCKERFILE_PATH="${{ matrix.dockerfile }}"
           TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}')
           IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:$TAG"
-          echo "------------------- TAG = $TAG-------------------"
+          echo "------------------- TAG = $TAG -------------------"
           
           echo "Building Docker image: $IMAGE_NAME"
           docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
