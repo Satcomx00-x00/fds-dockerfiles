@@ -1,6 +1,12 @@
 #!/bin/bash
-# Run FDS simulation
 
+# Check for pattern &HEAD CHID= in the FDS file
+if ! grep -q '&HEAD CHID='\''.*?'\''/' "$FDS_FILE_PATH"; then
+    echo "No &HEAD CHID= pattern found in the file. Mandatory."
+    exit 1
+fi
+
+# Run FDS simulation
 echo "Setting unlimited stack size..."
 ulimit -s unlimited
 
