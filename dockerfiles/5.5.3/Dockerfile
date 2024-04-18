@@ -1,5 +1,6 @@
 # Ubuntu Image
-FROM ubuntu:18.04
+FROM ubuntu:23.10
+# Initial 18.04, turned on 23.10 for Security purpose
 
 # Install lam mpi
 RUN apt-get update && apt-get install -y lam-runtime
