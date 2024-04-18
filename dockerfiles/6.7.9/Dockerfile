@@ -1,6 +1,6 @@
 # Ubuntu Image
-FROM ubuntu:22.04
-
+FROM ubuntu:23.10
+# 22.04
 # provide setup-file
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS6.7.9/FDS6.7.9_SMV6.7.21_rls_lnx.sh
 
@@ -20,7 +20,9 @@ RUN chmod +x /root/*.sh && \
     rm /root/*.sh && \
     mv /root/FDS/FDS6/bin /root/FDS/ && \
     rm -rf /root/FDS/FDS6/* && \
-    mv /root/FDS/bin /root/FDS/FDS6/
+    mv /root/FDS/bin /root/FDS/FDS6/ && \
+    apt-get update && \
+    apt-get upgrade -y
 
 # set workdir for fds-simulation
 WORKDIR /workdir

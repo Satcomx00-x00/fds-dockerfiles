@@ -35,7 +35,9 @@ RUN chmod +x /root/*.sh && \
 # mpiexec won't run as root without '--allow-run-as-root' parameter - let's fix it with a simple hack
 RUN mv /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec_orig && \
     echo '#!/bin/bash\nmpiexec_orig --allow-run-as-root $@' >> /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec && \
-    chmod 755 /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec
+    chmod 755 /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec && \
+    apt-get update && \
+    apt-get upgrade -y
 
 # set workdir for fds-simulation
 WORKDIR /workdir

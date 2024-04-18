@@ -23,7 +23,9 @@ RUN chmod +x /root/*.sh && \
     mv /root/FDS/FDS6/bin /root/FDS/ && \
     rm -rf /root/FDS/FDS6/* && \
     mv /root/FDS/bin /root/FDS/FDS6/ && \
-    ln -s /root/FDS/FDS6/bin/INTEL/mpi/intel64/lib/libmpifort.so.12.0.0 /root/FDS/FDS6/bin/INTEL/mpi/intel64/lib/libmpifort.so.12 
+    ln -s /root/FDS/FDS6/bin/INTEL/mpi/intel64/lib/libmpifort.so.12.0.0 /root/FDS/FDS6/bin/INTEL/mpi/intel64/lib/libmpifort.so.12  && \
+    apt-get update && \
+    apt-get upgrade -y
 
 # set workdir for fds-simulation
 WORKDIR /workdir

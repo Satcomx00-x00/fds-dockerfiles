@@ -21,7 +21,9 @@ RUN wget -q https://github.com/firemodels/fds/releases/download/Git-r1/FDS_6.3.0
     rm /root/*.sh && \
     mv /root/FDS/FDS6/bin /root/FDS/ && \
     rm -rf /root/FDS/FDS6/* && \
-    mv /root/FDS/bin /root/FDS/FDS6/
+    mv /root/FDS/bin /root/FDS/FDS6/ && \
+    apt-get update && \
+    apt-get upgrade -y
 
 # download FDS with openmpi, extract openmpi files, copy essential data and clear tmp folder
 RUN cd /tmp && \
