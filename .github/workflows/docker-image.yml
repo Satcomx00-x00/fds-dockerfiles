@@ -23,7 +23,7 @@ jobs:
           echo '{"dockerfiles":[' > dockerfile_list.json
           find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -printf '"%p", ' >> dockerfile_list.json
           echo 'null]}' >> dockerfile_list.json
-          sed -i '$ s/, null]/]/' dockerfile_list.json # Correctly formats the JSON to remove the last comma
+          sed -i '$ s/, null]/]/' dockerfile_list.json
       - name: Print dockerfile_list.json
         run: cat dockerfile_list.json
       - name: Set output
@@ -54,27 +54,19 @@ jobs:
       - name: Build and Tag Docker image
         run: |
           DOCKERFILE_PATH="${{ matrix.dockerfile }}"
-          TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}' | tr '[:upper:]' '[:lower:]')  # Ensure TAG is lowercase
+          TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}' | tr '[:upper:]' '[:lower:]')
           IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:$TAG"
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV  # Pass IMAGE_NAME to subsequent steps
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
           echo "Building Docker image: $IMAGE_NAME"
           docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
-        
+
       - name: Test Docker image
         run: |
           echo "Testing Docker image: $IMAGE_NAME"
-          # Ensure to run the fds command with the correct path to the test file
           docker run --rm $IMAGE_NAME fds /Test_File/test_file.fds
-        shell: /usr/bin/bash -e {0}
         env:
           PROJECT_NAME: fds-dockerfiles
-          IMAGE_NAME: satcomx00/fds:6.7.8
-        
-        
-      - name: Print IMAGE_NAME for debugging
-        run: |
-          echo "IMAGE_NAME to be used for testing: $IMAGE_NAME"
-        
+
       - name: Push Docker image
         run: |
           echo "Logging in to Docker Hub..."
