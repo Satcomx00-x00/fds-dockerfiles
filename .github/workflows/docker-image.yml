@@ -68,7 +68,7 @@ jobs:
         shell: /usr/bin/bash -e {0}
         env:
           PROJECT_NAME: fds-dockerfiles
-          IMAGE_NAME: $IMAGE_NAME
+          IMAGE_NAME: satcomx00/fds:6.7.8
         
         
       - name: Print IMAGE_NAME for debugging
