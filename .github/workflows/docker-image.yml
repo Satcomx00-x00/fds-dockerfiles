@@ -63,9 +63,11 @@ jobs:
       - name: Test Docker image
         run: |
           echo "Testing Docker image: $IMAGE_NAME"
-          docker run --rm $IMAGE_NAME fds /Test_File/test_file.fds
+          docker run --rm $IMAGE_NAME mpiexec -n $MPI fds /Test_File/test_file.fds
         env:
           PROJECT_NAME: fds-dockerfiles
+          MPI: 4
+          OMP_NUM_THREADS: 2
 
       - name: Push Docker image
         run: |

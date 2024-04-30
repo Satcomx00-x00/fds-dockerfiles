@@ -7,13 +7,10 @@
 ****************** MAILLAGE *****************
 
 &MESH ID='Mesh00', 	IJK=42,42,42, XB= -0.1,4.1,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=0 / 0.1 m
-
-
-
-!&MESH ID='Mesh01', 	IJK=11,42,42, XB= -0.1,1.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=0 / 0.1 m
-!&MESH ID='Mesh02', 	IJK=10,42,42, XB=  1.0,2.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=1 / 0.1 m
-!&MESH ID='Mesh03', 	IJK=10,42,42, XB=  2.0,3.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=2 / 0.1 m
-!&MESH ID='Mesh04', 	IJK=11,42,42, XB=  3.0,4.1,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=3 / 0.1 m
+&MESH ID='Mesh01', 	IJK=11,42,42, XB= -0.1,1.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=1 / 0.1 m
+&MESH ID='Mesh02', 	IJK=10,42,42, XB=  1.0,2.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=2 / 0.1 m
+&MESH ID='Mesh03', 	IJK=10,42,42, XB=  2.0,3.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=3 / 0.1 m
+&MESH ID='Mesh04', 	IJK=11,42,42, XB=  3.0,4.1,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=4 / 0.1 m
 
 ****************** FRONTIERES ******************
 &VENT MB= 'XMIN', SURF_ID='OPEN'/
