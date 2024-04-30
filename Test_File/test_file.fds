@@ -1,0 +1,132 @@
+&HEAD CHID='test_file'/
+
+*****************************************************************
+******************* CONDITIONS INITIALES ************************
+*****************************************************************
+
+****************** MAILLAGE *****************
+
+&MESH ID='Mesh00', 	IJK=42,42,42, XB= -0.1,4.1,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=0 / 0.1 m
+
+
+
+!&MESH ID='Mesh01', 	IJK=11,42,42, XB= -0.1,1.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=0 / 0.1 m
+!&MESH ID='Mesh02', 	IJK=10,42,42, XB=  1.0,2.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=1 / 0.1 m
+!&MESH ID='Mesh03', 	IJK=10,42,42, XB=  2.0,3.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=2 / 0.1 m
+!&MESH ID='Mesh04', 	IJK=11,42,42, XB=  3.0,4.1,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=3 / 0.1 m
+
+****************** FRONTIERES ******************
+&VENT MB= 'XMIN', SURF_ID='OPEN'/
+&VENT MB= 'XMAX', SURF_ID='OPEN'/
+&VENT MB= 'YMIN', SURF_ID='OPEN'/    
+&VENT MB= 'YMAX', SURF_ID='OPEN'/   
+&VENT MB= 'ZMIN', SURF_ID='OPEN'/
+&VENT MB= 'ZMAX', SURF_ID='OPEN'/
+
+****************** MISC ******************
+
+&MISC TMPA=20 /	
+
+****************** TEMPS ******************
+
+&TIME T_BEGIN=	0.0/
+&TIME T_END=	200.0/
+
+&DUMP DT_BNDF=		5	/	2Δt÷NFRAMES par défaut
+&DUMP DT_CTRL=		5	/	Δt÷NFRAMES par défaut
+&DUMP DT_DEVC=		1	/	Δt÷NFRAMES par défaut
+&DUMP DT_DEVC_LINE= 1	/	Δt÷2 par défaut
+&DUMP DT_HRR=		1	/	Δt÷NFRAMES par défaut
+&DUMP DT_ISOF=		5	/	Δt÷NFRAMES par défaut
+&DUMP DT_PL3D=		60	/	1E10 s par défaut
+&DUMP DT_RESTART=	30	/	1000000 s par défaut
+&DUMP DT_SL3D=		60	/	Δt÷5 par défaut
+&DUMP DT_SLCF=		1	/	Δt÷NFRAMES par défaut
+&DUMP WRITE_XYZ=.FALSE.	/	.FALSE. par défaut
+
+
+****************** SPEC ******************
+
+&SPEC ID='PE-PMMA', FORMULA='C1H1.7O0.4Cl0.18' /
+&SPEC ID='OXYGEN', LUMPED_COMPONENT_ONLY=.TRUE. /
+&SPEC ID='NITROGEN', LUMPED_COMPONENT_ONLY=.TRUE. /
+&SPEC ID='HYDROGEN CHLORIDE', LUMPED_COMPONENT_ONLY=.TRUE. /
+&SPEC ID='WATER VAPOR', LUMPED_COMPONENT_ONLY=.TRUE. /
+&SPEC ID='CARBON MONOXIDE', LUMPED_COMPONENT_ONLY=.TRUE. /
+&SPEC ID='CARBON DIOXIDE', LUMPED_COMPONENT_ONLY=.TRUE. /
+&SPEC ID='SOOT', LUMPED_COMPONENT_ONLY=.TRUE. /
+&SPEC ID='AIR', BACKGROUND=.TRUE., SPEC_ID(1)='OXYGEN', VOLUME_FRACTION(1)=1, SPEC_ID(2)='NITROGEN', VOLUME_FRACTION(2)=3.76 /
+
+&SPEC ID='PRODUCTS_PE-PMMA'																
+	SPEC_ID(1)='CARBON DIOXIDE', VOLUME_FRACTION(1)=0.8942															
+	SPEC_ID(2)='CARBON MONOXIDE', VOLUME_FRACTION(2)=0.0161																
+	SPEC_ID(3)='WATER VAPOR', VOLUME_FRACTION(3)=0.7550																
+	SPEC_ID(4)='SOOT', VOLUME_FRACTION(4)=0.0996																
+	SPEC_ID(5)='NITROGEN' ,VOLUME_FRACTION(5)=4.0600																
+	SPEC_ID(6)='HYDROGEN CHLORIDE', VOLUME_FRACTION(6)=0.1800 /
+
+****************** DIVERS ******************
+														
+&PRES MAX_PRESSURE_ITERATIONS= 100	/	10 par défaut																											
+&RADI NUMBER_RADIATION_ANGLES= 720	/	100 par défaut
+
+****************************************************************
+************************ DEFINITIONS ***************************
+****************************************************************
+
+****************** MATERIAUX ******************
+
+&MATL ID = 'CONCRETE'
+		FYI= 'NF EN 1992-1-2 + AN'
+		EMISSIVITY=	1
+		DENSITY= 2300
+		SPECIFIC_HEAT = 1.0
+		CONDUCTIVITY = 1.0 /
+
+****************** SURFACES ******************    
+&SURF ID = 'BETON'
+		MATL_ID = 'CONCRETE'
+		THICKNESS = 0.1
+		BACKING = 'EXPOSED' 
+		TRANSPARENCY = 0.1
+		COLOR = 'CHOCOLATE' /
+
+****************************************************************
+********************** MODELISATION ****************************
+****************************************************************
+
+¤¤¤ PAROIS LOCAL ¤¤¤																
+
+&OBST XB=-0.1,0.0,	 0.0,4.0,	 0.0,4.0, SURF_ID='BETON'/	OUEST
+&OBST XB= 4.0,4.1,	 0.0,4.0,	 0.0,4.0, SURF_ID='BETON'/ EST
+&OBST XB=-0.1,4.1,	-0.1,0.0,	 0.0,4.0, SURF_ID='BETON'/ SUD 
+&OBST XB=-0.1,4.1,	 4.0,4.1,	 0.0,4.0, SURF_ID='BETON'/ NORD
+&OBST XB=-0.1,4.1,	-0.1,4.1,	-0.1,0.0, SURF_ID='BETON'/ SOL 
+!&OBST XB=-0.1,4.1,	-0.1,4.1,	 4.0,4.1, SURF_ID='BETON'/ PLAFOND
+
+
+
+****************************************************************
+************************** FOYER *******************************
+****************************************************************
+
+****************** DEFINITION DU FOYER ******************
+&REAC ID  = 'equipement elec'
+	  FUEL ='PE-PMMA'
+	  SPEC_ID_NU = 'PE-PMMA', 'AIR', 'PRODUCTS_PE-PMMA'
+	  NU = -1.0000, -1.079790, 1.0000
+	  HEAT_OF_COMBUSTION = 34400  /
+
+
+&SURF 	ID = 'A1'
+		RGB = 255, 0, 0
+		HRRPUA =  1005
+		RAMP_Q = 'A1' /
+		
+&RAMP ID = 'A1', T = 	0	, F =	0.00	/
+&RAMP ID = 'A1', T = 	40	, F =	1.00	/
+&RAMP ID = 'A1', T = 	200	, F =	0.00	/
+
+&OBST ID='Foyer',XB = 0.0,0.1,		0.6,1.2,	0.3,0.9, SURF_ID6='INERT','A1','INERT','INERT','INERT','INERT' /
+
+&TAIL /

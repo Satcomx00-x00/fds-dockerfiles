@@ -51,18 +51,22 @@ jobs:
           DOCKERFILE_DIR=$(dirname ${{ matrix.dockerfile }})
           cp ./entrypoint.sh $DOCKERFILE_DIR
 
-      - name: Build and Push Docker image
+      - name: Build Docker image
         run: |
           DOCKERFILE_PATH="${{ matrix.dockerfile }}"
           TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}')
           IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:$TAG"
-          echo "------------------- TAG = $TAG -------------------"
-          
           echo "Building Docker image: $IMAGE_NAME"
           docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
-          
+
+      - name: Run tests on Docker image
+        run: |
+          echo "Running tests on Docker image: $IMAGE_NAME"
+          docker run --rm $IMAGE_NAME ./Test_File/test_file.fds
+
+      - name: Login and Push Docker image
+        run: |
           echo "Logging in to Docker Hub..."
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
-          
           echo "Pushing Docker image: $IMAGE_NAME"
           docker push "$IMAGE_NAME"
