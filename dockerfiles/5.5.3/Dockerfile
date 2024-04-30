@@ -26,8 +26,8 @@ RUN useradd -m lam && \
     chmod 755 /root/FDS/FDS5/bin/lamboot && \
     mv /root/FDS /home/lam/ && \
     chown -R lam: /home/lam/FDS && \
-    apt-get update && \
-    apt-get upgrade -y
+    apt update && \
+    apt upgrade -y
 
 # login as lam user
 USER lam

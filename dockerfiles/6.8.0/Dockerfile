@@ -21,7 +21,7 @@ RUN chmod +x /root/*.sh && \
     mv /root/FDS/FDS6/bin /root/FDS/ && \
     rm -rf /root/FDS/FDS6/* && \
     mv /root/FDS/bin /root/FDS/FDS6/
-    apt-get update 
+    apt update 
 
 # set workdir for fds-simulation
 WORKDIR /workdir
