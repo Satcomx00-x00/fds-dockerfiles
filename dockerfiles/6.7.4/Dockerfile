@@ -1,6 +1,6 @@
 # Ubuntu Image
 FROM ubuntu:18.04
-
+COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # provide setup-file
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS6.7.4/FDS6.7.4_SMV6.7.14_lnx.sh
 

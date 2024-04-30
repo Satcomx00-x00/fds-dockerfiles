@@ -1,6 +1,7 @@
 # Ubuntu Image
 FROM ubuntu:23.10
 # 22.04
+COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # provide setup-file
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS6.7.9/FDS6.7.9_SMV6.7.21_rls_lnx.sh
 

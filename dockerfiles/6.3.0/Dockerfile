@@ -1,6 +1,6 @@
 # Ubuntu Image
 FROM ubuntu:18.04
-
+COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # Install wget, bc, libnuma1, libxml2, libssl and symlink filenames
 RUN apt-get update && apt-get install -y wget bc libnuma1 libxml2 libssl1.0.0 && \
 ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /usr/lib/x86_64-linux-gnu/libcrypto.so.10 && \
