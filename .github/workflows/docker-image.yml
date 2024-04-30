@@ -63,10 +63,13 @@ jobs:
       - name: Test Docker image
         run: |
           echo "Testing Docker image: $IMAGE_NAME"
-          docker run --rm $IMAGE_NAME ./Test_File/test_file.fds
+          # Ensure to run the fds command with the correct path to the test file
+          docker run --rm $IMAGE_NAME fds /Test_File/test_file.fds
         shell: /usr/bin/bash -e {0}
         env:
           PROJECT_NAME: fds-dockerfiles
+          IMAGE_NAME: ***/fds:6.7.8
+        
         
       - name: Print IMAGE_NAME for debugging
         run: |
