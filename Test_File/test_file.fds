@@ -6,11 +6,12 @@
 
 ****************** MAILLAGE *****************
 
-&MESH ID='Mesh00', 	IJK=42,42,42, XB= -0.1,4.1,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=0 / 0.1 m
-&MESH ID='Mesh01', 	IJK=11,42,42, XB= -0.1,1.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=0 / 0.1 m
-&MESH ID='Mesh02', 	IJK=10,42,42, XB=  1.0,2.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=1 / 0.1 m
-&MESH ID='Mesh03', 	IJK=10,42,42, XB=  2.0,3.0,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=2 / 0.1 m
-&MESH ID='Mesh04', 	IJK=11,42,42, XB=  3.0,4.1,	-0.1,4.1,	-0.1,4.1,  MPI_PROCESS=3 / 0.1 m
+&MESH ID='Mesh00', 	IJK=24,24,24, XB= -0.2,2.2,	-0.2,2.2,	-0.2,2.2,  MPI_PROCESS=0 / 0.1 m
+
+!&MESH ID='Mesh01', 	IJK=11,24,24, XB= -0.2,0.9,	-0.2,2.2,	-0.2,2.1,  MPI_PROCESS=0 / 0.1 m
+!&MESH ID='Mesh02', 	IJK=11,24,24, XB=  0.9,2.0,	-0.2,2.2,	-0.2,2.1,  MPI_PROCESS=1 / 0.1 m
+!&MESH ID='Mesh03', 	IJK=11,24,24, XB=  2.0,3.1,	-0.2,2.2,	-0.2,2.1,  MPI_PROCESS=2 / 0.1 m
+!&MESH ID='Mesh04', 	IJK=11,24,24, XB=  3.1,4.2,	-0.2,2.2,	-0.2,2.1,  MPI_PROCESS=3 / 0.1 m
 
 ****************** FRONTIERES ******************
 &VENT MB= 'XMIN', SURF_ID='OPEN'/
@@ -27,7 +28,7 @@
 ****************** TEMPS ******************
 
 &TIME T_BEGIN=	0.0/
-&TIME T_END=	200.0/
+&TIME T_END=	10.0/
 
 &DUMP DT_BNDF=		5	/	2Δt÷NFRAMES par défaut
 &DUMP DT_CTRL=		5	/	Δt÷NFRAMES par défaut
@@ -94,12 +95,12 @@
 
 ¤¤¤ PAROIS LOCAL ¤¤¤																
 
-&OBST XB=-0.1,0.0,	 0.0,4.0,	 0.0,4.0, SURF_ID='BETON'/	OUEST
-&OBST XB= 4.0,4.1,	 0.0,4.0,	 0.0,4.0, SURF_ID='BETON'/ EST
-&OBST XB=-0.1,4.1,	-0.1,0.0,	 0.0,4.0, SURF_ID='BETON'/ SUD 
-&OBST XB=-0.1,4.1,	 4.0,4.1,	 0.0,4.0, SURF_ID='BETON'/ NORD
-&OBST XB=-0.1,4.1,	-0.1,4.1,	-0.1,0.0, SURF_ID='BETON'/ SOL 
-!&OBST XB=-0.1,4.1,	-0.1,4.1,	 4.0,4.1, SURF_ID='BETON'/ PLAFOND
+&OBST XB=-0.1,0.0,	 0.0,2.0,	 0.0,2.0, SURF_ID='BETON'/	OUEST
+&OBST XB= 2.0,2.1,	 0.0,2.0,	 0.0,2.0, SURF_ID='BETON'/ EST
+&OBST XB=-0.1,2.1,	-0.1,0.0,	 0.0,2.0, SURF_ID='BETON'/ SUD 
+&OBST XB=-0.1,2.1,	 2.0,2.1,	 0.0,2.0, SURF_ID='BETON'/ NORD
+&OBST XB=-0.1,2.1,	-0.1,2.1,	-0.1,0.0, SURF_ID='BETON'/ SOL 
+!&OBST XB=-0.1,2.1,	-0.1,2.1,	 2.0,2.1, SURF_ID='BETON'/ PLAFOND
 
 
 
@@ -120,9 +121,8 @@
 		HRRPUA =  1005
 		RAMP_Q = 'A1' /
 		
-&RAMP ID = 'A1', T = 	0	, F =	0.00	/
-&RAMP ID = 'A1', T = 	40	, F =	1.00	/
-&RAMP ID = 'A1', T = 	200	, F =	0.00	/
+&RAMP ID = 'A1', T = 	0	, F =	1.00	/
+&RAMP ID = 'A1', T = 	10	, F =	0.00	/
 
 &OBST ID='Foyer',XB = 0.0,0.1,		0.6,1.2,	0.3,0.9, SURF_ID6='INERT','A1','INERT','INERT','INERT','INERT' /
 
