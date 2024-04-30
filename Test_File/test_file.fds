@@ -28,7 +28,7 @@
 ****************** TEMPS ******************
 
 &TIME T_BEGIN=	0.0/
-&TIME T_END=	5.0/
+&TIME T_END=	3.0/
 
 &DUMP DT_BNDF=		5	/	2Δt÷NFRAMES par défaut
 &DUMP DT_CTRL=		5	/	Δt÷NFRAMES par défaut

@@ -67,7 +67,7 @@ jobs:
         env:
           PROJECT_NAME: fds-dockerfiles
           MPI: 1
-          OMP_NUM_THREADS: 2
+          # OMP_NUM_THREADS: 2
 
       - name: Push Docker image
         run: |
