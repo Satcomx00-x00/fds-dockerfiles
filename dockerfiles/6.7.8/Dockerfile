@@ -1,6 +1,9 @@
 # Ubuntu Image
 FROM ubuntu:mantic-20240216
 
+# Assuming you have the file in the Test_File directory in your repository
+COPY ./Test_File/test_file.fds /Test_File/test_file.fds
+
 # provide setup-file
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS6.7.8/FDS6.7.8_SMV6.7.19_rls_lnx.sh
 
