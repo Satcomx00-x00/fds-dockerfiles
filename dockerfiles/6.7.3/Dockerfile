@@ -1,5 +1,5 @@
 # Ubuntu Image
-FROM ubuntu:mantic-20240216
+FROM ubuntu:mantic-20240427
 COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # provide setup-file
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS6.7.3/FDS6.7.3_SMV6.7.10_linux64.sh
