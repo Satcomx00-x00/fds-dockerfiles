@@ -10,13 +10,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TEST_FILE_PATH: "/Test_File/test_file.fds"
+  TEST_MPI_PROCESSES: 1
+  DOCKER_REGISTRY: docker.io
+
 jobs:
   generate-dockerfile-list:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Generate list of Dockerfiles
         run: |
@@ -24,54 +29,78 @@ jobs:
           find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -printf '"%p", ' >> dockerfile_list.json
           echo 'null]}' >> dockerfile_list.json
           sed -i '$ s/, null]/]/' dockerfile_list.json
+
       - name: Print dockerfile_list.json
         run: cat dockerfile_list.json
+
       - name: Set output
         id: set-matrix
         run: |
           MATRIX=$(jq -c '{dockerfiles: [.dockerfiles[] | select(. != null)]}' dockerfile_list.json)
-          echo "::set-output name=matrix::${MATRIX}"
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
           echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
 
-  build:
+  test-and-build:
     needs: generate-dockerfile-list
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         dockerfile: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}
+    
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set project name
-        run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
-
-      - name: Copy entrypoint.sh to Dockerfile directory
+      - name: Set up test environment
         run: |
           DOCKERFILE_DIR=$(dirname ${{ matrix.dockerfile }})
-          cp ./entrypoint.sh $DOCKERFILE_DIR
+          cp ./entrypoint.sh $DOCKERFILE_DIR/
+          echo "DOCKERFILE_DIR=${DOCKERFILE_DIR}" >> $GITHUB_ENV
+          
+          # Generate tag from dockerfile path
+          TAG=$(echo "${{ matrix.dockerfile }}" | awk -F/ '{print $(NF-1)}' | tr '[:upper:]' '[:lower:]')
+          IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:${TAG}"
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+          echo "Building image: ${IMAGE_NAME}"
 
-      - name: Build and Tag Docker image
+      - name: Build Docker image
         run: |
-          DOCKERFILE_PATH="${{ matrix.dockerfile }}"
-          TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}' | tr '[:upper:]' '[:lower:]')
-          IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:$TAG"
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          echo "Building Docker image: $IMAGE_NAME"
-          docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
+          docker build \
+            --file "${{ matrix.dockerfile }}" \
+            --tag "$IMAGE_NAME" \
+            --build-arg TEST_FILE_PATH="$TEST_FILE_PATH" \
+            .
 
-      - name: Test Docker image
+      - name: Run FDS test simulation
         run: |
-          echo "Testing Docker image: $IMAGE_NAME"
-          docker run --rm $IMAGE_NAME mpiexec -n $MPI fds /Test_File/test_file.fds
-        env:
-          PROJECT_NAME: fds-dockerfiles
-          MPI: 1
-          # OMP_NUM_THREADS: 2
+          echo "Running test simulation with image: $IMAGE_NAME"
+          docker run --rm \
+            -e FDS_FILE_PATH="$TEST_FILE_PATH" \
+            -e MPI_PROCESSES="$TEST_MPI_PROCESSES" \
+            -e INPUT_ARCHIVE_DIR="Test_File" \
+            "$IMAGE_NAME"
+
+      - name: Verify test results
+        run: |
+          # Get the container ID from the last run
+          CONTAINER_ID=$(docker ps -lq)
+          
+          # Check the simulation output files exist
+          docker exec $CONTAINER_ID test -f $(dirname $TEST_FILE_PATH)/test_file.out || exit 1
+          docker exec $CONTAINER_ID test -f $(dirname $TEST_FILE_PATH)/test_file.smv || exit 1
+          
+          # Check for error messages in the output
+          docker exec $CONTAINER_ID grep -i "error" $(dirname $TEST_FILE_PATH)/test_file.out && exit 1 || true
+          
+          echo "Test simulation completed successfully"
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_LOGIN }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push Docker image
-        run: |
-          echo "Logging in to Docker Hub..."
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
-          echo "Pushing Docker image: $IMAGE_NAME"
-          docker push "$IMAGE_NAME"
+        if: github.event_name != 'pull_request'
+        run: docker push "$IMAGE_NAME"
