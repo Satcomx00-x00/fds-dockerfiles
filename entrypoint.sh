@@ -9,8 +9,7 @@ readonly REQUIRED_ENV_VARS=(
 )
 
 # Script variables
-readonly WORKDIR="/workdir"
-readonly OUTPUT_DIR="/output"
+readonly WORKSPACE_DIR="/workspace"
 readonly LOG_DATE_FORMAT='+%Y-%m-%d %H:%M:%S'
 
 # Configure logging
@@ -28,15 +27,19 @@ for var in "${REQUIRED_ENV_VARS[@]}"; do
     [[ -z "${!var:-}" ]] && error "Required environment variable $var is not set"
 done
 
-# Validate file existence
-[[ ! -f "$FDS_FILE_PATH" ]] && error "FDS file not found: $FDS_FILE_PATH"
-[[ ! -d "$WORKDIR/$INPUT_ARCHIVE_DIR" ]] && error "Input directory not found: $WORKDIR/$INPUT_ARCHIVE_DIR"
-
-# Ensure output directory exists and is writable
-[[ ! -d "$OUTPUT_DIR" ]] && error "Output directory not found: $OUTPUT_DIR"
-[[ ! -w "$OUTPUT_DIR" ]] && error "Output directory not writable: $OUTPUT_DIR"
+# Validate workspace directory
+[[ ! -d "$WORKSPACE_DIR" ]] && error "Workspace directory not found: $WORKSPACE_DIR"
+[[ ! -w "$WORKSPACE_DIR" ]] && error "Workspace directory not writable: $WORKSPACE_DIR"
 
 log "Starting FDS simulation process"
+
+# Print current directory and contents
+log "Current working directory: $(pwd)"
+log "Workspace contents:"
+ls -la "$WORKSPACE_DIR"
+
+# Validate input file
+[[ ! -f "$FDS_FILE_PATH" ]] && error "FDS input file not found: $FDS_FILE_PATH"
 
 # Check for pattern &HEAD CHID= in the FDS file
 if ! grep -q '&HEAD[[:space:]]*CHID='\''[^'\'']*'\''' "$FDS_FILE_PATH"; then
@@ -51,31 +54,40 @@ for limit in stack virtual; do
     fi
 done
 
-# Extract filenames
-input_filename=$(basename "$FDS_FILE_PATH")
-simulation_name="${input_filename%.fds}"
-
 # Run FDS simulation
 log "Running FDS simulation with $MPI_PROCESSES processes..."
-if ! cd "$OUTPUT_DIR" || ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
+log "Using input file: $FDS_FILE_PATH"
+
+if ! cd "$WORKSPACE_DIR"; then
+    error "Failed to change to workspace directory"
+fi
+
+if ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
     error "FDS simulation failed"
 fi
 
 log "FDS simulation completed successfully"
 
-# Create archive of outputs
-output_archive="${simulation_name}-output.zip"
-log "Creating output archive: $output_archive"
+# List generated files
+log "Generated files:"
+ls -la "$WORKSPACE_DIR"
 
-if ! zip -r "$output_archive" . -i "*.out" "*.smv" "*.sf" "*.bf" "*.q" "*.pl3d" 2>&1; then
-    error "Failed to create zip archive $output_archive"
+# Create archive if needed
+simulation_name=$(basename "${FDS_FILE_PATH%.fds}")
+if [[ -n "${ZIP_ARCHIVE:-}" ]]; then
+    output_archive="${simulation_name}-output.zip"
+    log "Creating output archive: $output_archive"
+    
+    if ! zip -r "$output_archive" . -i "*.out" "*.smv" "*.sf" "*.bf" "*.q" "*.pl3d" 2>&1; then
+        error "Failed to create zip archive $output_archive"
+    fi
+    
+    log "Archive created successfully at $WORKSPACE_DIR/$output_archive"
 fi
-
-log "Archive created successfully at $OUTPUT_DIR/$output_archive"
 
 # Verify output files
 for ext in out smv; do
-    if [[ ! -f "$OUTPUT_DIR/${simulation_name}.${ext}" ]]; then
+    if [[ ! -f "${simulation_name}.${ext}" ]]; then
         error "Expected output file ${simulation_name}.${ext} not found"
     fi
 done
