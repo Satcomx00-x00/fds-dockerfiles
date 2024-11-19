@@ -10,6 +10,7 @@ readonly REQUIRED_ENV_VARS=(
 
 # Script variables
 readonly WORKDIR="/workdir"
+readonly OUTPUT_DIR="/output"
 readonly LOG_DATE_FORMAT='+%Y-%m-%d %H:%M:%S'
 
 # Configure logging
@@ -31,6 +32,10 @@ done
 [[ ! -f "$FDS_FILE_PATH" ]] && error "FDS file not found: $FDS_FILE_PATH"
 [[ ! -d "$WORKDIR/$INPUT_ARCHIVE_DIR" ]] && error "Input directory not found: $WORKDIR/$INPUT_ARCHIVE_DIR"
 
+# Ensure output directory exists and is writable
+[[ ! -d "$OUTPUT_DIR" ]] && error "Output directory not found: $OUTPUT_DIR"
+[[ ! -w "$OUTPUT_DIR" ]] && error "Output directory not writable: $OUTPUT_DIR"
+
 log "Starting FDS simulation process"
 
 # Check for pattern &HEAD CHID= in the FDS file
@@ -49,34 +54,31 @@ done
 # Extract filenames
 input_filename=$(basename "$FDS_FILE_PATH")
 simulation_name="${input_filename%.fds}"
-output_archive="${simulation_name}-output.zip"
 
 # Run FDS simulation
 log "Running FDS simulation with $MPI_PROCESSES processes..."
-if ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
+if ! cd "$OUTPUT_DIR" || ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
     error "FDS simulation failed"
 fi
 
 log "FDS simulation completed successfully"
 
-# Create zip archive
+# Create archive of outputs
+output_archive="${simulation_name}-output.zip"
 log "Creating output archive: $output_archive"
-cd "$WORKDIR" || error "Failed to change to $WORKDIR directory"
 
-if ! zip -r "$output_archive" "$INPUT_ARCHIVE_DIR" 2>&1; then
+if ! zip -r "$output_archive" . -i "*.out" "*.smv" "*.sf" "*.bf" "*.q" "*.pl3d" 2>&1; then
     error "Failed to create zip archive $output_archive"
 fi
 
-log "Archive created successfully at $WORKDIR/$output_archive"
+log "Archive created successfully at $OUTPUT_DIR/$output_archive"
 
-# Verify zip file was created and has content
-if [[ ! -f "$WORKDIR/$output_archive" ]]; then
-    error "Zip file was not created"
-fi
-
-if [[ ! -s "$WORKDIR/$output_archive" ]]; then
-    error "Zip file is empty"
-fi
+# Verify output files
+for ext in out smv; do
+    if [[ ! -f "$OUTPUT_DIR/${simulation_name}.${ext}" ]]; then
+        error "Expected output file ${simulation_name}.${ext} not found"
+    fi
+done
 
 log "Process completed successfully"
 exit 0
