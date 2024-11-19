@@ -14,6 +14,7 @@ env:
   TEST_FILE_PATH: "/Test_File/test_file.fds"
   TEST_MPI_PROCESSES: 1
   DOCKER_REGISTRY: docker.io
+  TEST_OUTPUT_DIR: "test_output"
 
 jobs:
   generate-dockerfile-list:
@@ -62,6 +63,9 @@ jobs:
           IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:${TAG}"
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
           echo "Building image: ${IMAGE_NAME}"
+          
+          # Create test output directory
+          mkdir -p $TEST_OUTPUT_DIR
 
       - name: Build Docker image
         run: |
@@ -74,7 +78,8 @@ jobs:
       - name: Run FDS test simulation
         run: |
           echo "Running test simulation with image: $IMAGE_NAME"
-          docker run --rm \
+          docker run \
+            -v $(pwd)/$TEST_OUTPUT_DIR:/output \
             -e FDS_FILE_PATH="$TEST_FILE_PATH" \
             -e MPI_PROCESSES="$TEST_MPI_PROCESSES" \
             -e INPUT_ARCHIVE_DIR="Test_File" \
@@ -82,17 +87,42 @@ jobs:
 
       - name: Verify test results
         run: |
-          # Get the container ID from the last run
-          CONTAINER_ID=$(docker ps -lq)
+          echo "Verifying simulation outputs..."
           
-          # Check the simulation output files exist
-          docker exec $CONTAINER_ID test -f $(dirname $TEST_FILE_PATH)/test_file.out || exit 1
-          docker exec $CONTAINER_ID test -f $(dirname $TEST_FILE_PATH)/test_file.smv || exit 1
+          # Check for output files
+          test -f "$TEST_OUTPUT_DIR/test_file.out" || {
+            echo "Error: test_file.out not found"
+            exit 1
+          }
+          
+          test -f "$TEST_OUTPUT_DIR/test_file.smv" || {
+            echo "Error: test_file.smv not found"
+            exit 1
+          }
           
           # Check for error messages in the output
-          docker exec $CONTAINER_ID grep -i "error" $(dirname $TEST_FILE_PATH)/test_file.out && exit 1 || true
+          if grep -i "error" "$TEST_OUTPUT_DIR/test_file.out"; then
+            echo "Error: Found error messages in simulation output"
+            exit 1
+          fi
+          
+          # Check for successful completion message
+          if ! grep -i "STOP: FDS completed successfully" "$TEST_OUTPUT_DIR/test_file.out"; then
+            echo "Error: FDS simulation did not complete successfully"
+            exit 1
+          }
           
           echo "Test simulation completed successfully"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: fds-test-results-${{ matrix.dockerfile }}
+          path: |
+            ${{ env.TEST_OUTPUT_DIR }}/*.out
+            ${{ env.TEST_OUTPUT_DIR }}/*.smv
+          retention-days: 7
 
       - name: Login to Docker Hub
         if: github.event_name != 'pull_request'
