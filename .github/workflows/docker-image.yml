@@ -10,19 +10,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  TEST_FILE_PATH: "/Test_File/test_file.fds"
-  TEST_MPI_PROCESSES: 1
-  DOCKER_REGISTRY: docker.io
-  TEST_OUTPUT_DIR: "test_output"
-
 jobs:
   generate-dockerfile-list:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Generate list of Dockerfiles
         run: |
@@ -30,113 +24,54 @@ jobs:
           find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -printf '"%p", ' >> dockerfile_list.json
           echo 'null]}' >> dockerfile_list.json
           sed -i '$ s/, null]/]/' dockerfile_list.json
-
       - name: Print dockerfile_list.json
         run: cat dockerfile_list.json
-
       - name: Set output
         id: set-matrix
         run: |
           MATRIX=$(jq -c '{dockerfiles: [.dockerfiles[] | select(. != null)]}' dockerfile_list.json)
-          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          echo "::set-output name=matrix::${MATRIX}"
           echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
 
-  test-and-build:
+  build:
     needs: generate-dockerfile-list
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         dockerfile: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Set up test environment
+      - name: Set project name
+        run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
+
+      - name: Copy entrypoint.sh to Dockerfile directory
         run: |
           DOCKERFILE_DIR=$(dirname ${{ matrix.dockerfile }})
-          cp ./entrypoint.sh $DOCKERFILE_DIR/
-          echo "DOCKERFILE_DIR=${DOCKERFILE_DIR}" >> $GITHUB_ENV
+          cp ./entrypoint.sh $DOCKERFILE_DIR
 
-          # Generate tag from dockerfile path
-          TAG=$(echo "${{ matrix.dockerfile }}" | awk -F/ '{print $(NF-1)}' | tr '[:upper:]' '[:lower:]')
-          IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:${TAG}"
-          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
-          echo "Building image: ${IMAGE_NAME}"
-
-          # Create test output directory with proper permissions
-          mkdir -p $TEST_OUTPUT_DIR
-          chmod 777 $TEST_OUTPUT_DIR
-
-          # Copy test file to output directory
-          cp Test_File/test_file.fds $TEST_OUTPUT_DIR/
-          echo "Test directory contents after setup:"
-          ls -la $TEST_OUTPUT_DIR
-
-      - name: Run FDS test simulation
+      - name: Build and Tag Docker image
         run: |
-          echo "Running test simulation with image: $IMAGE_NAME"
-          docker run \
-            --rm \
-            -v "$(pwd)/$TEST_OUTPUT_DIR:/workspace" \
-            -w /workspace \
-            -e FDS_FILE_PATH="/workspace/test_file.fds" \
-            -e MPI_PROCESSES="$TEST_MPI_PROCESSES" \
-            -e INPUT_ARCHIVE_DIR="/workspace" \
-            "$IMAGE_NAME"
+          DOCKERFILE_PATH="${{ matrix.dockerfile }}"
+          TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}' | tr '[:upper:]' '[:lower:]')
+          IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:$TAG"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "Building Docker image: $IMAGE_NAME"
+          docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
 
-      - name: List output directory contents
+      - name: Test Docker image
         run: |
-          echo "Output directory contents after simulation:"
-          ls -la $TEST_OUTPUT_DIR
+          echo "Testing Docker image: $IMAGE_NAME"
+          docker run --rm $IMAGE_NAME mpiexec -n $MPI fds /Test_File/test_file.fds
+        env:
+          PROJECT_NAME: fds-dockerfiles
+          MPI: 1
+          # OMP_NUM_THREADS: 2
 
-      - name: Verify test results
+      - name: Push Docker image
         run: |
-          echo "Verifying simulation outputs..."
-
-          # Check for output files with more detailed error reporting
-          for ext in out smv; do
-            out_file="$TEST_OUTPUT_DIR/test_file.${ext}"
-            if [[ ! -f "$out_file" ]]; then
-              echo "Error: ${ext} file not found at: $out_file"
-              echo "Current directory: $(pwd)"
-              echo "Directory structure:"
-              find . -name "test_file.*" -type f
-              echo "Full directory contents of $TEST_OUTPUT_DIR:"
-              ls -la "$TEST_OUTPUT_DIR"
-              exit 1
-            else
-              echo "Found ${ext} file: $out_file"
-              echo "File size: $(stat -f%z "$out_file") bytes"
-            fi
-          done
-
-          # Show beginning of output file
-          echo "First few lines of output file:"
-          head -n 5 "$TEST_OUTPUT_DIR/test_file.out"
-
-          # Check output file contents
-          if grep -i "error" "$TEST_OUTPUT_DIR/test_file.out"; then
-            echo "Error: Found error messages in simulation output"
-            cat "$TEST_OUTPUT_DIR/test_file.out"
-            exit 1
-          fi
-
-          # Check for successful completion
-          if ! grep -i "STOP: FDS completed successfully" "$TEST_OUTPUT_DIR/test_file.out"; then
-            echo "Error: FDS simulation did not complete successfully"
-            echo "Full output file contents:"
-            cat "$TEST_OUTPUT_DIR/test_file.out"
-            exit 1
-          fi
-
-          echo "Test simulation completed successfully"
-
-      - name: Archive test outputs on failure
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-outputs-${{ matrix.dockerfile }}
-          path: |
-            ${{ env.TEST_OUTPUT_DIR }}/*
-          retention-days: 5
+          echo "Logging in to Docker Hub..."
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
+          echo "Pushing Docker image: $IMAGE_NAME"
+          docker push "$IMAGE_NAME"
