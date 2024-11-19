@@ -1,4 +1,58 @@
-- name: Set up test environment
+name: Docker Image CI
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TEST_FILE_PATH: "/Test_File/test_file.fds"
+  TEST_MPI_PROCESSES: 1
+  DOCKER_REGISTRY: docker.io
+  TEST_OUTPUT_DIR: "test_output"
+
+jobs:
+  generate-dockerfile-list:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate list of Dockerfiles
+        run: |
+          echo '{"dockerfiles":[' > dockerfile_list.json
+          find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -printf '"%p", ' >> dockerfile_list.json
+          echo 'null]}' >> dockerfile_list.json
+          sed -i '$ s/, null]/]/' dockerfile_list.json
+
+      - name: Print dockerfile_list.json
+        run: cat dockerfile_list.json
+
+      - name: Set output
+        id: set-matrix
+        run: |
+          MATRIX=$(jq -c '{dockerfiles: [.dockerfiles[] | select(. != null)]}' dockerfile_list.json)
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
+
+  test-and-build:
+    needs: generate-dockerfile-list
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up test environment
         run: |
           DOCKERFILE_DIR=$(dirname ${{ matrix.dockerfile }})
           cp ./entrypoint.sh $DOCKERFILE_DIR/
@@ -60,4 +114,3 @@
           fi
           
           echo "Test simulation completed successfully"
-          
