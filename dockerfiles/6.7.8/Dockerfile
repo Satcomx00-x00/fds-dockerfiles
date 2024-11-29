@@ -1,5 +1,5 @@
 # Ubuntu Image
-FROM ubuntu:mantic-20240216
+FROM ubuntu:23.10
 
 COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 
