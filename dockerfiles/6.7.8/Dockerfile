@@ -28,3 +28,11 @@ RUN chmod +x /root/*.sh && \
 
 # set workdir for fds-simulation
 WORKDIR /workdir
+
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set entrypoint
+ENTRYPOINT [/entrypoint.sh]
+

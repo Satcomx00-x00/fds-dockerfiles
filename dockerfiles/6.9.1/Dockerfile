@@ -23,3 +23,11 @@ ENV LD_LIBRARY_PATH=/usr/lib64:$impihome/lib:$LD_LIBRARY_PATH
 COPY --from=fds /root/FDS /root/FDS
 # set workdir for fds-simulation
 WORKDIR /workdir
+
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set entrypoint
+ENTRYPOINT [/entrypoint.sh]
+

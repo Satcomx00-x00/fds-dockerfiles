@@ -15,6 +15,11 @@ ENV PATH=$FDSBINDIR:$impihome/bin:$PATH
 ENV FI_PROVIDER_PATH=$impihome/prov
 ENV LD_LIBRARY_PATH=/usr/lib64:$impihome/lib:$LD_LIBRARY_PATH
 
+RUN apt-get update && \
+    apt-get install -y nano mlocate && \
+    updatedb && \
+    rm -rf /var/lib/apt/lists/*
+
 # set execution rights, run setup script, remove setup script and unessential data
 RUN chmod +x /root/*.sh && \
     /root/*.sh y && \
@@ -27,3 +32,11 @@ RUN chmod +x /root/*.sh && \
 
 # set workdir for fds-simulation
 WORKDIR /workdir
+
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set entrypoint
+ENTRYPOINT [/entrypoint.sh]
+
