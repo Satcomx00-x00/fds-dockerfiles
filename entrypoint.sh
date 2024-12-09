@@ -30,7 +30,7 @@ done
 
 # Validate file existence
 [[ ! -f "$FDS_FILE_PATH" ]] && error "FDS file not found: $FDS_FILE_PATH"
-[[ ! -d "$WORKDIR/$INPUT_ARCHIVE_DIR" ]] && error "Input directory not found: $WORKDIR/$INPUT_ARCHIVE_DIR"
+[[ ! -d "$INPUT_ARCHIVE_DIR" ]] && error "Input directory not found: $INPUT_ARCHIVE_DIR"
 
 log "Starting FDS simulation process"
 
