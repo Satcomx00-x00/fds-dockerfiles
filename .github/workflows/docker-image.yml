@@ -45,7 +45,12 @@ jobs:
           cat > $DOCKERFILE_DIR/entrypoint.sh << 'EOF'
           #!/bin/bash
           set -e
-          
+
+          # Set FDS_FILE_PATH if not provided but a file is passed as an argument
+          if [ -z "${FDS_FILE_PATH}" ] && [ $# -gt 0 ]; then
+              export FDS_FILE_PATH="${@: -1}"
+          fi
+
           # Default command if none provided
           if [ $# -eq 0 ]; then
               exec mpiexec -n ${MPI:-1} fds
