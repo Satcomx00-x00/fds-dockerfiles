@@ -76,7 +76,8 @@ jobs:
         env:
           PROJECT_NAME: fds-dockerfiles
           MPI: 1
-          # OMP_NUM_THREADS: 2
+          OMP_NUM_THREADS: 1
+          MPI_PROCESSES: 1
       - name: Push Docker image
         run: |
           echo "Logging in to Docker Hub..."
