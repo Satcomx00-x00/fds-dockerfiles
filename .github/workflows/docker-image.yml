@@ -20,14 +20,13 @@ jobs:
           find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -printf '"%p", ' >> dockerfile_list.json
           echo 'null]}' >> dockerfile_list.json
           sed -i '$ s/, null]/]/' dockerfile_list.json
-      - name: Print dockerfile_list.json
-        run: cat dockerfile_list.json
       - name: Set output
         id: set-matrix
         run: |
           MATRIX=$(jq -c '{dockerfiles: [.dockerfiles[] | select(. != null)]}' dockerfile_list.json)
           echo "::set-output name=matrix::${MATRIX}"
           echo "MATRIX_JSON=${MATRIX}" >> $GITHUB_ENV
+
   build:
     needs: generate-dockerfile-list
     runs-on: ubuntu-latest
@@ -37,22 +36,85 @@ jobs:
         dockerfile: ${{fromJson(needs.generate-dockerfile-list.outputs.matrix).dockerfiles}}
     steps:
       - uses: actions/checkout@v3
-      - name: Set project name
-        run: echo "PROJECT_NAME=$(echo $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
+      - name: Create test files and directories
+        run: |
+          DOCKERFILE_DIR=$(dirname ${{ matrix.dockerfile }})
+          mkdir -p $DOCKERFILE_DIR/Test_File
+          cat > $DOCKERFILE_DIR/Test_File/test_file.fds << 'EOF'
+          &HEAD CHID='test_case' /
+          &TIME T_END=1.0 /
+          &MESH IJK=10,10,10, XB=0,1,0,1,0,1 /
+          &TAIL /
+          EOF
+          mkdir -p $DOCKERFILE_DIR/workdir/input
+          touch $DOCKERFILE_DIR/workdir/input/dummy_file
       - name: Create entrypoint script
         run: |
           DOCKERFILE_DIR=$(dirname ${{ matrix.dockerfile }})
           cat > $DOCKERFILE_DIR/entrypoint.sh << 'EOF'
-          #!/bin/bash
-          set -e
-          
-          # Default command if none provided
-          if [ $# -eq 0 ]; then
-              exec mpiexec -n ${MPI:-1} fds
-          else
-              exec "$@"
-          fi
-          EOF
+#!/bin/bash
+set -euo pipefail
+
+readonly REQUIRED_ENV_VARS=(
+    "FDS_FILE_PATH"
+    "MPI_PROCESSES"
+    "INPUT_ARCHIVE_DIR"
+)
+
+readonly WORKDIR="/workdir"
+readonly LOG_DATE_FORMAT='+%Y-%m-%d %H:%M:%S'
+
+log() {
+    echo "[$(date "$LOG_DATE_FORMAT")] $1"
+}
+
+error() {
+    log "ERROR: $1" >&2
+    exit 1
+}
+
+for var in "${REQUIRED_ENV_VARS[@]}"; do
+    [[ -z "${!var:-}" ]] && error "Required environment variable $var is not set"
+done
+
+[[ ! -f "$FDS_FILE_PATH" ]] && error "FDS file not found: $FDS_FILE_PATH"
+[[ ! -d "$WORKDIR/$INPUT_ARCHIVE_DIR" ]] && error "Input directory not found: $WORKDIR/$INPUT_ARCHIVE_DIR"
+
+log "Starting FDS simulation process"
+
+if ! grep -q '&HEAD[[:space:]]*CHID='\''[^'\'']*'\''' "$FDS_FILE_PATH"; then
+    error "No &HEAD CHID= pattern found in the file. This field is mandatory."
+fi
+
+log "Configuring system resources..."
+for limit in stack virtual; do
+    if ! ulimit -$([[ "$limit" == "stack" ]] && echo "s" || echo "v") unlimited; then
+        error "Failed to set unlimited $limit size"
+    fi
+done
+
+input_filename=$(basename "$FDS_FILE_PATH")
+simulation_name="${input_filename%.fds}"
+output_archive="${simulation_name}-output.zip"
+
+log "Running FDS simulation with $MPI_PROCESSES processes..."
+if ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
+    error "FDS simulation failed"
+fi
+
+log "Creating output archive: $output_archive"
+cd "$WORKDIR" || error "Failed to change to $WORKDIR directory"
+
+if ! zip -r "$output_archive" "$INPUT_ARCHIVE_DIR" 2>&1; then
+    error "Failed to create zip archive $output_archive"
+fi
+
+[[ ! -f "$WORKDIR/$output_archive" ]] && error "Zip file was not created"
+[[ ! -s "$WORKDIR/$output_archive" ]] && error "Zip file is empty"
+
+log "Process completed successfully"
+exit 0
+EOF
           chmod +x $DOCKERFILE_DIR/entrypoint.sh
       - name: Build and Tag Docker image
         run: |
@@ -60,19 +122,17 @@ jobs:
           TAG=$(echo "$DOCKERFILE_PATH" | awk -F/ '{print $(NF-1)}' | tr '[:upper:]' '[:lower:]')
           IMAGE_NAME="${{ secrets.DOCKERHUB_LOGIN }}/fds:$TAG"
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          echo "Building Docker image: $IMAGE_NAME"
           docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
       - name: Test Docker image
         run: |
           echo "Testing Docker image: $IMAGE_NAME"
-          docker run --rm $IMAGE_NAME mpiexec -n $MPI fds /Test_File/test_file.fds
-        env:
-          PROJECT_NAME: fds-dockerfiles
-          MPI: 1
-          # OMP_NUM_THREADS: 2
+          docker run --rm \
+            -e FDS_FILE_PATH=/Test_File/test_file.fds \
+            -e MPI_PROCESSES=1 \
+            -e INPUT_ARCHIVE_DIR=input \
+            $IMAGE_NAME
       - name: Push Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
-          echo "Logging in to Docker Hub..."
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_LOGIN }} --password-stdin
-          echo "Pushing Docker image: $IMAGE_NAME"
           docker push "$IMAGE_NAME"

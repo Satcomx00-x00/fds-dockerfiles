@@ -1,4 +1,5 @@
 #!/bin/bash
+# entrypoint.sh
 set -euo pipefail
 
 # Environment variables (expected to be set externally)
