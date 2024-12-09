@@ -47,6 +47,7 @@ jobs:
           set -e
 
           # Set FDS_FILE_PATH if not provided but a file is passed as an argument
+          FDS_FILE_PATH=/Test_File/test_file.fds
           if [ -z "${FDS_FILE_PATH}" ] && [ $# -gt 0 ]; then
               export FDS_FILE_PATH="${@: -1}"
           fi
