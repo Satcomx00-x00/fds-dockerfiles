@@ -47,8 +47,7 @@ jobs:
           set -e
 
           # Set FDS_FILE_PATH if not provided but a file is passed as an argument
-          export FDS_FILE_PATH=/Test_File/test_file.fds
-
+          
           if [ -z "${FDS_FILE_PATH}" ] && [ $# -gt 0 ]; then
               export FDS_FILE_PATH="${@: -1}"
           fi
@@ -72,6 +71,7 @@ jobs:
       - name: Test Docker image
         run: |
           echo "Testing Docker image: $IMAGE_NAME"
+          export FDS_FILE_PATH=/Test_File/test_file.fds
           docker run --rm $IMAGE_NAME mpiexec -n $MPI fds /Test_File/test_file.fds
         env:
           PROJECT_NAME: fds-dockerfiles
