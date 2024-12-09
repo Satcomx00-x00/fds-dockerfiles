@@ -70,7 +70,7 @@ jobs:
           docker build . --file "$DOCKERFILE_PATH" --tag "$IMAGE_NAME"
       - name: Test Docker image
         run: |
-          echo "Testing Docker image: $IMAGE_NAME"
+          echo "Testing Docker image ($IMAGE_NAME): ${IMAGE_NAME}"
           export FDS_FILE_PATH=/Test_File/test_file.fds
           docker run --rm -e FDS_FILE_PATH=/Test_File/test_file.fds $IMAGE_NAME mpiexec -n $MPI
         env:
