@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "Testing Docker image ($IMAGE_NAME): ${IMAGE_NAME}"
           export FDS_FILE_PATH=/Test_File/test_file.fds
-          docker run --rm -e MPI=1 -e MPI_PROCESSES=1 -e INPUT_ARCHIVE_DIR=/Test_File/ -e FDS_FILE_PATH=/Test_File/test_file.fds $IMAGE_NAME mpiexec -n $MPI
+          docker run --rm -e MPI=1 -e OMP_NUM_THREADS=1 -e MPI_PROCESSES=1 -e INPUT_ARCHIVE_DIR=/Test_File/ -e FDS_FILE_PATH=/Test_File/test_file.fds $IMAGE_NAME mpiexec -n $MPI
         env:
           PROJECT_NAME: fds-dockerfiles
           MPI: 1
