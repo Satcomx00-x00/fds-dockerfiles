@@ -14,8 +14,6 @@ readonly WORKDIR="/workdir"
 readonly LOG_DATE_FORMAT='+%Y-%m-%d %H:%M:%S'
 readonly REQUIRED_PACKAGES=(
     "zip"
-    "mpi-default-bin"    # For mpiexec
-    "hostname"           # Required for MPI in containers
 )
 
 # Configure logging
@@ -35,21 +33,37 @@ check_root() {
     fi
 }
 
-# Configure MPI for container environment
-configure_mpi() {
-    log "Configuring MPI for container environment..."
-    
-    # Configure MPI environment variables for container use
-    export OMPI_MCA_btl_vader_single_copy_mechanism=none
-    export OMPI_MCA_btl=^openib
-    export OMPI_MCA_oob_tcp_if_include=eth0
-    export OMPI_MCA_btl_tcp_if_include=eth0
+# Get FDS version
+get_fds_version() {
+    local version
+    version=$(fds -v 2>&1 | grep -oP '\d+\.\d+\.\d+' || echo "unknown")
+    echo "$version"
+}
+
+# Check if MPI package is needed
+need_mpi_package() {
+    local version="$1"
+    if [[ "$version" == "6.7.3" || "$version" == "6.7.1" ]]; then
+        return 1  # false in bash
+    fi
+    return 0  # true in bash
 }
 
 # Check and install required packages
 install_required_packages() {
     log "Checking for required packages..."
     local missing_packages=()
+    local fds_version
+    
+    fds_version=$(get_fds_version)
+    log "Detected FDS version: $fds_version"
+    
+    if need_mpi_package "$fds_version"; then
+        REQUIRED_PACKAGES+=("mpi-default-bin")
+        log "Adding MPI package to requirements for FDS version $fds_version"
+    else
+        log "Skipping MPI package installation for FDS version $fds_version"
+    fi
 
     for package in "${REQUIRED_PACKAGES[@]}"; do
         if ! dpkg -l | grep -q "^ii.*$package"; then
@@ -60,7 +74,7 @@ install_required_packages() {
     if [[ ${#missing_packages[@]} -gt 0 ]]; then
         log "Installing missing packages: ${missing_packages[*]}"
         apt-get update || error "Failed to update package lists"
-        DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing_packages[@]}" || error "Failed to install required packages"
+        apt-get install -y "${missing_packages[@]}" || error "Failed to install required packages"
     fi
 
     log "All required packages are installed"
@@ -74,9 +88,6 @@ done
 # Check root and install packages
 check_root
 install_required_packages
-
-# Configure MPI for container
-configure_mpi
 
 # Validate file existence
 [[ ! -f "$FDS_FILE_PATH" ]] && error "FDS file not found: $FDS_FILE_PATH"
@@ -102,13 +113,9 @@ input_filename=$(basename "$FDS_FILE_PATH")
 simulation_name="${input_filename%.fds}"
 output_archive="${simulation_name}-output.zip"
 
-# Run FDS simulation with improved MPI configuration
+# Run FDS simulation
 log "Running FDS simulation with $MPI_PROCESSES processes..."
-if ! mpiexec --allow-run-as-root \
-    -n "$MPI_PROCESSES" \
-    --mca btl_vader_single_copy_mechanism none \
-    --mca btl ^openib \
-    fds "$FDS_FILE_PATH"; then
+if ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
     error "FDS simulation failed"
 fi
 
