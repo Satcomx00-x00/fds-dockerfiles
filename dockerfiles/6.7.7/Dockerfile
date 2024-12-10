@@ -1,5 +1,5 @@
 # Ubuntu Image
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 # 22.04
 COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # provide setup-file
@@ -14,10 +14,12 @@ ENV impihome=/root/FDS/FDS6/bin/INTEL
 ENV PATH=$FDSBINDIR:$impihome/bin:$PATH
 ENV FI_PROVIDER_PATH=$impihome/prov
 ENV LD_LIBRARY_PATH=/usr/lib64:$impihome/lib:$LD_LIBRARY_PATH
+
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y nano locate zip && \
     updatedb && \
     rm -rf /var/lib/apt/lists/*
+
 # set execution rights, run setup script, remove setup script and unessential data
 RUN chmod +x /root/*.sh && \
     /root/*.sh y && \

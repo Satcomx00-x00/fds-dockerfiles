@@ -23,8 +23,7 @@ ENV impihome=$FDSBINDIR/INTEL
 ENV PATH=$FDSBINDIR:$impihome/bin:$PATH
 ENV FI_PROVIDER_PATH=$impihome/prov
 ENV LD_LIBRARY_PATH=/usr/lib64:$impihome/lib:$LD_LIBRARY_PATH
-# copy binaries
-COPY --from=fds /root/FDS /root/FDS
+
 # set workdir for fds-simulation
 WORKDIR /workdir
 
