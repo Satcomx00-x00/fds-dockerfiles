@@ -17,7 +17,6 @@ RUN chmod +x /root/*.sh && \
     find /root/FDS/* -type d -name "FDS*" -exec rm -rf {} + && \
     rm /root/FDS/*VARS.sh
 
-FROM ubuntu:24.04
 # set environment variables
 ENV FDSBINDIR=/root/FDS
 ENV impihome=$FDSBINDIR/INTEL
