@@ -27,5 +27,9 @@ RUN chmod +x /root/*.sh && \
 # set workdir for fds-simulation
 WORKDIR /workdir
 
-# Run the FDS command
-CMD ["mpiexec", "-n", "$MPI", "fds", "$FDS_FILE_PATH"]
+# # Run the FDS command
+# CMD ["mpiexec", "-n", "$MPI", "fds", "$FDS_FILE_PATH"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

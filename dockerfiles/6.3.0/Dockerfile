@@ -42,3 +42,8 @@ RUN mv /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec /root/FDS/FDS6/bin/openmpi_64/b
 
 # set workdir for fds-simulation
 WORKDIR /workdir
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
