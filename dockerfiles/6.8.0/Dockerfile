@@ -8,7 +8,7 @@ ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS-6.8.0/FDS-
 # download FDS
 ADD $setupfile /root/
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y nano mlocate zip && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nano locate zip && \
     updatedb && \
     rm -rf /var/lib/apt/lists/*
 # set environment variables

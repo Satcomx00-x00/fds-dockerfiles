@@ -6,7 +6,7 @@ COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 ADD https://github.com/firemodels/fds/releases/download/FDS-6.9.1/FDS-6.9.1_SMV-6.9.1_lnx.sh /root/
 # install dependencies
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y nano mlocate zip && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nano locate zip && \
     updatedb && \
     rm -rf /var/lib/apt/lists/*
 # extract

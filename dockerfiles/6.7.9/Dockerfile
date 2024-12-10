@@ -14,7 +14,7 @@ ENV FI_PROVIDER_PATH=$impihome/prov
 ENV LD_LIBRARY_PATH=/usr/lib64:$impihome/lib:$LD_LIBRARY_PATH
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y nano mlocate zip && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nano locate zip && \
     updatedb && \
     rm -rf /var/lib/apt/lists/*
 
