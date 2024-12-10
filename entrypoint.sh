@@ -6,6 +6,7 @@ set -euo pipefail
 readonly REQUIRED_ENV_VARS=(
     "FDS_FILE_PATH"      # Path to FDS input file
     "MPI_PROCESSES"      # Number of MPI processes
+    "OMP_NUM_THREADS"    # Number of OpenMP threads per MPI process
     "INPUT_ARCHIVE_DIR"  # Directory to be archived
 )
 
@@ -54,6 +55,26 @@ install_required_packages() {
     log "All required packages are installed"
 }
 
+# Configure OpenMP settings
+configure_openmp() {
+    log "Configuring OpenMP settings..."
+    
+    # Set OpenMP thread count
+    export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
+    
+    # Set OpenMP thread affinity
+    export OMP_PROC_BIND="close"
+    export OMP_PLACES="cores"
+    
+    # Dynamic adjustment of threads disabled for better performance
+    export OMP_DYNAMIC="FALSE"
+    
+    # Set OpenMP scheduling policy
+    export OMP_SCHEDULE="static"
+    
+    log "OpenMP configured with ${OMP_NUM_THREADS} threads per MPI process"
+}
+
 # Validate environment variables
 for var in "${REQUIRED_ENV_VARS[@]}"; do
     [[ -z "${!var:-}" ]] && error "Required environment variable $var is not set"
@@ -62,6 +83,9 @@ done
 # Check root and install packages
 check_root
 install_required_packages
+
+# Configure OpenMP
+configure_openmp
 
 # Validate file existence
 [[ ! -f "$FDS_FILE_PATH" ]] && error "FDS file not found: $FDS_FILE_PATH"
@@ -87,9 +111,18 @@ input_filename=$(basename "$FDS_FILE_PATH")
 simulation_name="${input_filename%.fds}"
 output_archive="${simulation_name}-output.zip"
 
-# Run FDS simulation
-log "Running FDS simulation with $MPI_PROCESSES processes..."
-if ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
+# Calculate total cores used
+total_cores=$((MPI_PROCESSES * OMP_NUM_THREADS))
+log "Running hybrid parallel simulation with $MPI_PROCESSES MPI processes and $OMP_NUM_THREADS OpenMP threads per process (total cores: $total_cores)"
+
+# Run FDS simulation with hybrid parallelization
+if ! mpiexec -n "$MPI_PROCESSES" \
+    -env OMP_NUM_THREADS "$OMP_NUM_THREADS" \
+    -env OMP_PROC_BIND close \
+    -env OMP_PLACES cores \
+    -env OMP_DYNAMIC FALSE \
+    -env OMP_SCHEDULE static \
+    fds "$FDS_FILE_PATH"; then
     error "FDS simulation failed"
 fi
 
