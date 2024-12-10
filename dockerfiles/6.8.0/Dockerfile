@@ -1,12 +1,16 @@
 # Ubuntu Image
 FROM ubuntu:22.04
 
+COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # provide setup-file
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS-6.8.0/FDS-6.8.0_SMV-6.8.0_lnx.sh
 
 # download FDS
 ADD $setupfile /root/
-
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nano mlocate zip && \
+    updatedb && \
+    rm -rf /var/lib/apt/lists/*
 # set environment variables
 ENV FDSBINDIR=/root/FDS/FDS6/bin
 ENV impihome=/root/FDS/FDS6/bin/INTEL

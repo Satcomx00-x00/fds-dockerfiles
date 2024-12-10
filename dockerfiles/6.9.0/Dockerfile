@@ -1,8 +1,13 @@
 FROM ubuntu:24.04 as fds
+
+COPY ./Test_File/test_file.fds /Test_File/test_file.fds
+
 # download
 ADD https://github.com/firemodels/fds/releases/download/FDS-6.9.0/FDS-6.9.0_SMV-6.9.0_lnx.sh /root/
 # install dependencies
-RUN apt-get update && apt-get install -y bash wget && \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nano mlocate zip && \
+    updatedb && \
     rm -rf /var/lib/apt/lists/*
 # extract
 RUN chmod +x /root/*.sh && \

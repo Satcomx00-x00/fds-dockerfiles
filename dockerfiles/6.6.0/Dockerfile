@@ -11,7 +11,10 @@ ADD $setupfile /root/
 ENV FDSBINDIR=/root/FDS/FDS6/bin
 ENV PATH=$FDSBINDIR:$PATH
 ENV LD_LIBRARY_PATH=/usr/lib64:$FDSBINDIR/LIB64:$LD_LIBRARY_PATH
-
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nano mlocate zip && \
+    updatedb && \
+    rm -rf /var/lib/apt/lists/*
 # set execution rights, run setup script, remove setup script and unessential data
 RUN chmod +x /root/*.sh && \
     /root/*.sh y && \

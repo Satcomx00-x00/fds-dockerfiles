@@ -15,7 +15,10 @@ ENV FI_PROVIDER_PATH=$impihome/mpi/intel64/libfabric/lib/prov
 ENV I_MPI_ROOT=$impihome/mpi
 ENV MKLROOT=$impihome/mkl
 ENV LD_LIBRARY_PATH=/usr/lib64:$FDSBINDIR/LIB64:$impihome/mpi/intel64/libfabric/lib:$impihome/compiler/lib/intel64_lin:$impihome/mpi/intel64/lib:$impihome/mpi/intel64/lib/release:$LD_LIBRARY_PATH
-
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nano mlocate zip && \
+    updatedb && \
+    rm -rf /var/lib/apt/lists/*
 # set execution rights, run setup script, remove setup script and unessential data, fix wrong name of libmpifort by symlink
 RUN chmod +x /root/*.sh && \
     /root/*.sh y && \
