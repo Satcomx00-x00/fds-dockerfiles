@@ -12,6 +12,11 @@ readonly REQUIRED_ENV_VARS=(
 # Script variables
 readonly WORKDIR="/workdir"
 readonly LOG_DATE_FORMAT='+%Y-%m-%d %H:%M:%S'
+readonly REQUIRED_PACKAGES=(
+    "zip"
+    "mpi-default-bin"    # For mpiexec
+    "openssh-client"     # Often required for MPI
+)
 
 # Configure logging
 log() {
@@ -23,10 +28,41 @@ error() {
     exit 1
 }
 
+# Check if running as root
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error "This script must be run as root to install packages"
+    fi
+}
+
+# Check and install required packages
+install_required_packages() {
+    log "Checking for required packages..."
+    local missing_packages=()
+
+    for package in "${REQUIRED_PACKAGES[@]}"; do
+        if ! dpkg -l | grep -q "^ii.*$package"; then
+            missing_packages+=("$package")
+        fi
+    done
+
+    if [[ ${#missing_packages[@]} -gt 0 ]]; then
+        log "Installing missing packages: ${missing_packages[*]}"
+        apt-get update || error "Failed to update package lists"
+        apt-get install -y "${missing_packages[@]}" || error "Failed to install required packages"
+    fi
+
+    log "All required packages are installed"
+}
+
 # Validate environment variables
 for var in "${REQUIRED_ENV_VARS[@]}"; do
     [[ -z "${!var:-}" ]] && error "Required environment variable $var is not set"
 done
+
+# Check root and install packages
+check_root
+install_required_packages
 
 # Validate file existence
 [[ ! -f "$FDS_FILE_PATH" ]] && error "FDS file not found: $FDS_FILE_PATH"
