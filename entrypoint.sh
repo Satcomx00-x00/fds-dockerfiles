@@ -14,6 +14,7 @@ readonly WORKDIR="/workdir"
 readonly LOG_DATE_FORMAT='+%Y-%m-%d %H:%M:%S'
 readonly REQUIRED_PACKAGES=(
     "zip"
+    # "mpi-default-bin"    # For mpiexec
 )
 
 # Configure logging
@@ -33,37 +34,10 @@ check_root() {
     fi
 }
 
-# Get FDS version
-get_fds_version() {
-    local version
-    version=$(fds -v 2>&1 | grep -oP '\d+\.\d+\.\d+' || echo "unknown")
-    echo "$version"
-}
-
-# Check if MPI package is needed
-need_mpi_package() {
-    local version="$1"
-    if [[ "$version" == "6.7.3" || "$version" == "6.7.1" ]]; then
-        return 1  # false in bash
-    fi
-    return 0  # true in bash
-}
-
 # Check and install required packages
 install_required_packages() {
     log "Checking for required packages..."
     local missing_packages=()
-    local fds_version
-    
-    fds_version=$(get_fds_version)
-    log "Detected FDS version: $fds_version"
-    
-    if need_mpi_package "$fds_version"; then
-        REQUIRED_PACKAGES+=("mpi-default-bin")
-        log "Adding MPI package to requirements for FDS version $fds_version"
-    else
-        log "Skipping MPI package installation for FDS version $fds_version"
-    fi
 
     for package in "${REQUIRED_PACKAGES[@]}"; do
         if ! dpkg -l | grep -q "^ii.*$package"; then
