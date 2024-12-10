@@ -115,14 +115,9 @@ output_archive="${simulation_name}-output.zip"
 total_cores=$((MPI_PROCESSES * OMP_NUM_THREADS))
 log "Running hybrid parallel simulation with $MPI_PROCESSES MPI processes and $OMP_NUM_THREADS OpenMP threads per process (total cores: $total_cores)"
 
-# Run FDS simulation with hybrid parallelization
-if ! mpiexec -n "$MPI_PROCESSES" \
-    -env OMP_NUM_THREADS "$OMP_NUM_THREADS" \
-    -env OMP_PROC_BIND close \
-    -env OMP_PLACES cores \
-    -env OMP_DYNAMIC FALSE \
-    -env OMP_SCHEDULE static \
-    fds "$FDS_FILE_PATH"; then
+# Run FDS simulation with hybrid parallelization using environment variables
+# Environment variables are already set by configure_openmp()
+if ! mpiexec -n "$MPI_PROCESSES" fds "$FDS_FILE_PATH"; then
     error "FDS simulation failed"
 fi
 
