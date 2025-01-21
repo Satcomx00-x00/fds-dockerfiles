@@ -15,7 +15,7 @@ readonly WORKDIR="/workdir"
 readonly LOG_DATE_FORMAT='+%Y-%m-%d %H:%M:%S'
 readonly REQUIRED_PACKAGES=(
     "zip"
-    # "mpi-default-bin"    # For mpiexec
+    "mpi-default-bin"    # For mpiexec
 )
 
 # Configure logging
