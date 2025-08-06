@@ -1,5 +1,5 @@
 # Ubuntu Image
-FROM ubuntu:24.04
+FROM ubuntu:24.10
 
 COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 
