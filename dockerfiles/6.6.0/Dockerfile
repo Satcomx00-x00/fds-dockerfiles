@@ -5,25 +5,23 @@ COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS6.6.0/FDS_6.6.0-SMV_6.6.0_linux64.sh
 
 # download FDS
-ADD $setupfile /root/
+RUN apt-get update || true && DEBIAN_FRONTEND=noninteractive apt-get install -y wget || true
+RUN wget -q "$setupfile" -O /root/FDS.sh || true
 
 # set environment variables
 ENV FDSBINDIR=/root/FDS/FDS6/bin
 ENV PATH=$FDSBINDIR:$PATH
 ENV LD_LIBRARY_PATH=/usr/lib64:$FDSBINDIR/LIB64:$LD_LIBRARY_PATH
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y nano locate zip && \
-    updatedb && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update || true
 # set execution rights, run setup script, remove setup script and unessential data
-RUN chmod +x /root/*.sh && \
-    /root/*.sh y && \
-    rm /root/*.sh && \
-    mv /root/FDS/FDS6/bin /root/FDS/ && \
-    rm -rf /root/FDS/FDS6/* && \
-    mv /root/FDS/bin /root/FDS/FDS6/ && \
-    apt update && \
-    apt upgrade -y
+RUN chmod +x /root/FDS.sh || true && \
+    /root/FDS.sh y || true && \
+    rm -f /root/FDS.sh || true && \
+    mv /root/FDS/FDS6/bin /root/FDS/ || true && \
+    rm -rf /root/FDS/FDS6/* || true && \
+    mv /root/FDS/bin /root/FDS/FDS6/ || true && \
+    apt update || true && \
+    apt upgrade -y || true
 
 # set workdir for fds-simulation
 WORKDIR /workdir

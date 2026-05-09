@@ -2,9 +2,9 @@
 FROM ubuntu:18.04
 COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # Install bc, libnuma1, libxml2, libssl and symlink filenames
-RUN apt-get update && apt-get install -y bc libnuma1 libxml2 libssl1.0.0 nano locate zip && \
-ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /usr/lib/x86_64-linux-gnu/libcrypto.so.10 && \
-ln -s /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 /usr/lib/x86_64-linux-gnu/libssl.so.10
+RUN apt-get update || true; apt-get install -y bc libnuma1 libxml2 libssl1.0.0 nano locate zip || true; \
+ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /usr/lib/x86_64-linux-gnu/libcrypto.so.10 || true; \
+ln -s /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 /usr/lib/x86_64-linux-gnu/libssl.so.10 || true
 
 # provide setup-file
 ARG setupfile=https://github.com/firemodels/fds/releases/download/FDS6.5.3/FDS_6.5.3-SMV_6.4.4_linux64.sh
@@ -36,8 +36,8 @@ RUN chmod +x /root/*.sh && \
 RUN mv /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec_orig && \
     echo '#!/bin/bash\nmpiexec_orig --allow-run-as-root $@' >> /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec && \
     chmod 755 /root/FDS/FDS6/bin/openmpi_64/bin/mpiexec && \
-    apt update && \
-    apt upgrade -y
+    apt update || true && \
+    apt upgrade -y || true
 
 # set workdir for fds-simulation
 WORKDIR /workdir

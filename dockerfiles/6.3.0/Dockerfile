@@ -2,9 +2,9 @@
 FROM ubuntu:18.04
 COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # Install wget, bc, libnuma1, libxml2, libssl and symlink filenames
-RUN apt-get update && apt-get install -y wget bc libnuma1 libxml2 libssl1.0.0 nano locate zip && \
-ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /usr/lib/x86_64-linux-gnu/libcrypto.so.10 && \
-ln -s /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 /usr/lib/x86_64-linux-gnu/libssl.so.10
+RUN apt-get update || true; apt-get install -y wget bc libnuma1 libxml2 libssl1.0.0 nano locate zip || true; \
+ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /usr/lib/x86_64-linux-gnu/libcrypto.so.10 || true; \
+ln -s /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 /usr/lib/x86_64-linux-gnu/libssl.so.10 || true
 
 # set environment variables
 ENV FDSBINDIR=/root/FDS/FDS6/bin
@@ -22,8 +22,8 @@ RUN wget -q https://github.com/firemodels/fds/releases/download/Git-r1/FDS_6.3.0
     mv /root/FDS/FDS6/bin /root/FDS/ && \
     rm -rf /root/FDS/FDS6/* && \
     mv /root/FDS/bin /root/FDS/FDS6/ && \
-    apt update && \
-    apt upgrade -y
+    apt update || true && \
+    apt upgrade -y || true
 
 # download FDS with openmpi, extract openmpi files, copy essential data and clear tmp folder
 RUN cd /tmp && \

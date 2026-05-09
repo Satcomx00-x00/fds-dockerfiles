@@ -15,7 +15,8 @@ ENV PATH=$FDSBINDIR:$impihome/bin:$PATH
 ENV FI_PROVIDER_PATH=$impihome/prov
 ENV LD_LIBRARY_PATH=/usr/lib64:$impihome/lib:$LD_LIBRARY_PATH
 
-RUN apt-get update && \
+RUN sed -i 's|http://archive.ubuntu.com|http://old-releases.ubuntu.com|g; s|http://security.ubuntu.com|http://old-releases.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
+    apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y nano locate zip && \
     updatedb && \
     rm -rf /var/lib/apt/lists/*
@@ -27,6 +28,7 @@ RUN chmod +x /root/*.sh && \
     mv /root/FDS/FDS6/bin /root/FDS/ && \
     rm -rf /root/FDS/FDS6/* && \
     mv /root/FDS/bin /root/FDS/FDS6/ && \
+    sed -i 's|http://archive.ubuntu.com|http://old-releases.ubuntu.com|g; s|http://security.ubuntu.com|http://old-releases.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
     apt update && \
     apt upgrade -y
 

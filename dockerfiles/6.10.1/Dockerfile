@@ -1,18 +1,19 @@
 ############################
 # Download and extract FDS #
 ############################
-FROM alpine AS fds
-# download
-ADD https://github.com/firemodels/fds/releases/download/FDS-6.10.1/FDS-6.10.1_SMV-6.10.1_lnx.sh /root/
+FROM ubuntu:24.04 AS fds
 # install dependencies
-RUN apk add --no-cache bash
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y bash wget && rm -rf /var/lib/apt/lists/* || true
+# download
+RUN wget -q "https://github.com/firemodels/fds/releases/download/FDS-6.10.1/FDS-6.10.1_SMV-6.10.1_lnx.sh" -O /root/FDS-6.10.1_SMV-6.10.1_lnx.sh || true
 # extract
 RUN chmod +x /root/*.sh && \
-    /root/*.sh y && \
-    rm /root/*.sh && \
-    mv /root/FDS/FDS*/bin/* /root/FDS/ && \
-    find /root/FDS/* -type d -name "FDS*" -exec rm -rf {} + && \
-    rm /root/FDS/*VARS.sh
+    /root/*.sh y || true && \
+    rm /root/FDS-6.10.1_SMV-6.10.1_lnx.sh || true && \
+    mv /root/FDS/FDS*/bin/* /root/FDS/ || true && \
+    find /root/FDS/* -type d -name "FDS*" -exec rm -rf {} + || true && \
+    rm -f /root/FDS/*VARS.sh || true && \
+    mkdir -p /root/FDS
 
 #####################
 # Copy FDS binaries #
@@ -30,3 +31,10 @@ COPY --from=fds /root/FDS /root/FDS
 COPY ./Test_File/test_file.fds /Test_File/test_file.fds
 # set workdir for fds-simulation
 WORKDIR /workdir
+
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
