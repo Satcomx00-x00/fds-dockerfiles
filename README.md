@@ -41,7 +41,10 @@ The following table provides information about the basic runability of fds conta
 
 | FDS-Version (Tag)   | Linux                | WSL 2 (Windows) / Hyperkit (Mac OS) <sup>\*1</sup>  |
 | ------------------- | :------------------- | :-------------------------------------------------- |
-| 6.8.0, latest       | ✅                   | ✅                                                 |
+| 6.10.1, latest      | ✅                   | ✅                                                 |
+| 6.9.1               | ✅                   | ✅                                                 |
+| 6.9.0               | ✅                   | ✅                                                 |
+| 6.8.0               | ✅                   | ✅                                                 |
 | 6.7.9               | ✅                   | ✅                                                 |
 | 6.7.8               | ✅                   | ✅                                                 |
 | 6.7.7               | ✅                   | ✅                                                 |
